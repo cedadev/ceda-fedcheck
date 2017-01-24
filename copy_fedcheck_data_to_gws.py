@@ -22,6 +22,7 @@ There are directories
 import os, sys, re, glob, time, datetime
 import shutil
 
+
 def parse_filename(filename):
     """
     Routine to parse CMIP5 filename into consituent facets
@@ -30,13 +31,8 @@ def parse_filename(filename):
     :returns: realm, table, ensemble, folder, variable, ncfile
     """
 
-    file = filename.split('/')
-    realm = file[10].strip()
-    table = file[11].strip()
-    ensemble = file[12].strip()
-    folder = file[13].strip()
-    variable = file[14].strip()
-    ncfile = file[15].strip()
+    file_parts = [part.strip() for part in filename.split("/")]
+    realm, table, ensemble, folder, variable, ncfile = file_parts[10:]
 
     return realm, table, ensemble, folder, variable, ncfile
 
@@ -52,12 +48,8 @@ def copy_files(source_basedir, dest_basedir):
     :param dest_basedir: ESGF-fedcheck gws archive replica
     """
 
-    project = source_basedir.split('/')[4].strip()
-    product = source_basedir.split('/')[5].strip()
-    institute = source_basedir.split('/')[6].strip()
-    model = source_basedir.split('/')[7].strip()
-    experiment = source_basedir.split('/')[8].strip()
-    frequency = source_basedir.split('/')[9].strip()
+    split_basedir = [part.strip() for part in source_basedir.split('/')]
+    project, product, institute, model, experiment, frequency = split_basedir[4:10]
 
     for path, dirs, files in os.walk(source_basedir):
         for file in files:
@@ -67,23 +59,23 @@ def copy_files(source_basedir, dest_basedir):
                 source_file = os.path.join(path, file)
 
                 # Get CMIP5 facets from file name
-                realm, table, ensemble, folder, variable, ncfile = parse_filename(os.path.join(path, file))
+                realm, table, ensemble, folder, var_date, ncfile = parse_filename(os.path.join(path, file))
 
                 # Name destination file in esgf-fedcheck gws files/ folder
                 dest_file = os.path.join(dest_basedir, project, product, institute, model, experiment,
-                                             frequency, realm, table, ensemble, variable, folder, ncfile)
+                                             frequency, realm, table, ensemble, var_date, folder, ncfile)
 
                 print "COPY:" + source_file
                 print "DEST:" + dest_file
 
-                # Get version folder from variable name
-                var = variable.split('_')[0].strip()
-                version = 'v' + variable.split('_')[1].strip()
+                # Get version folder from var_date name
+                varid, date = [part.strip() for part in var_date.split('_')]
+                version = 'v' + date
 
                 # VERSIONING
                 # Create the version folder if it doesn't exist
                 dest_version_dir = os.path.join(dest_basedir, project, product, institute, model, experiment,
-                                             frequency, realm, table, ensemble, var, version)
+                                             frequency, realm, table, ensemble, varid, version)
 
                 if not os.path.exists(dest_version_dir):
                     print "MAKE DIR: " + dest_version_dir
@@ -98,7 +90,7 @@ def copy_files(source_basedir, dest_basedir):
                 # LATEST
                 # Make latest dir if it doesn't exist
                 latest_dir = os.path.join(dest_basedir, project, product, institute, model, experiment,
-                                             frequency, realm, table, ensemble, var, 'latest')
+                                             frequency, realm, table, ensemble, varid, 'latest')
 
                 if not os.path.exists(latest_dir):
                     print "MAKE DIR: " + latest_dir
@@ -110,11 +102,10 @@ def copy_files(source_basedir, dest_basedir):
                 latest_file = os.path.join(latest_dir, ncfile)
 
                 if not os.path.isfile(os.path.join(latest_dir, ncfile)):
+
                     # get current version
-                    currentf_year = int(variable.split('_')[1].strip()[:4])
-                    currentf_mon = int(variable.split('_')[1].strip()[4:6])
-                    currentf_day = int(variable.split('_')[1].strip()[6:])
-                    current_version = datetime.datetime(currentf_year, currentf_mon, currentf_day)
+                    date_ints = [int(item) for item in (date[:4], date[4:6], date[6:8])]
+                    current_version = datetime.datetime(*date_ints)
 
                     # get symlink version
 #                    symlink_file = os.path.realpath(latest_file)
@@ -135,8 +126,10 @@ def copy_files(source_basedir, dest_basedir):
                     # make symbolic links
                     # os.symlink(latest_file, dest_file)
 
+
 if __name__ == "__main__":
+
     source_basedir = '/badc/cmip5/data/cmip5/output1/MOHC/HadGEM2-ES/esmControl/mon'
-    dest_basedir = '/group_workspaces/jasmin/esgf_fedcheck/archive/cmip5/data/'
+    dest_basedir = '/group_workspaces/jasmin/esgf_fedcheck/archive/cmip5/data'
     dest_file = copy_files(source_basedir, dest_basedir)
 
