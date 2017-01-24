@@ -1,4 +1,6 @@
-s program is for the ESGF fedcheck data, which is being performed in preparation for CMIP6.
+#!/usr/bin/env python
+"""
+This program is for the ESGF fedcheck data, which is being performed in preparation for CMIP6.
 The purpose is to copy CMIP5 data from the CEDA archive to the ESGF fedcheck group workspace while
 changing the data reference syntax from the CMIP5 structure to the CMIP6 structure.
 
