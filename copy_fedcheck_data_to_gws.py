@@ -49,8 +49,9 @@ def copy_files(source_basedir, dest_basedir):
     """
 
     split_basedir = [part.strip() for part in source_basedir.split('/')]
-    project, product, institute, model, experiment, frequency = split_basedir[4:10]
+    product, institute, model, experiment, frequency = split_basedir[5:10]
     project = 'cmip6'
+
     for path, dirs, files in os.walk(source_basedir):
         for file in files:
             if not os.path.islink(os.path.join(path, file)):
@@ -59,42 +60,40 @@ def copy_files(source_basedir, dest_basedir):
                 source_file = os.path.join(path, file)
 
                 # Get CMIP5 facets from file name
-                realm, table, ensemble, folder, var_date, ncfile = parse_filename(os.path.join(path, file))
+                realm, table, ensemble, files_folder, var_date, ncfile = parse_filename(os.path.join(path, file))
+
+                # Get version folder from var_date name
+                variable, date = [part.strip() for part in var_date.split('_')]
 
                 # Name destination file in esgf-fedcheck gws files/ folder
                 dest_dir = os.path.join(dest_basedir, project, product, institute, model, experiment,
-                                             frequency, realm, table, ensemble, var_date, folder)
+                                             frequency, realm, table, ensemble, variable, files_folder, var_date)
+
                 if not os.path.exists(dest_dir):
                     os.makedirs(dest_dir)
 
-                dest_file = os.path.join(dest_basedir, project, product, institute, model, experiment,
-                                             frequency, realm, table, ensemble, var_date, folder, ncfile)
-
+                dest_file = os.path.join(dest_dir, ncfile)
                 shutil.copy(source_file, dest_file)
 
                 print "COPY:" + source_file
                 print "DEST:" + dest_file
 
-                # Get version folder from var_date name
-                varid, date = [part.strip() for part in var_date.split('_')]
-                version = 'v' + date
-
                 # VERSIONING
                 # Create the version folder if it doesn't exist
+                version = 'v' + date
                 dest_version_dir = os.path.join(dest_basedir, project, product, institute, model, experiment,
-                                             frequency, realm, table, ensemble, varid, version)
-
+                                             frequency, realm, table, ensemble, variable, version)
                 if not os.path.exists(dest_version_dir):
                     print "MAKE DIR: " + dest_version_dir
                     os.makedirs(dest_version_dir)
 
-                # CHANGE DIR
+                # Change dir to make relative symlinks
                 print "PWD: " + dest_version_dir
                 os.chdir(dest_version_dir)
 
                 # file to symlink to
 #                link_target = os.path.join('../files/d%/s%') % (version, ncfile)
-                link_target = os.path.join('../files/' + version + '/' + ncfile)
+                link_target = os.path.join('../files/' + var_date + '/' + ncfile)
                 link_src = os.path.join(dest_version_dir, ncfile)
                 # MAKE LINK
                 print "LINKING: " + link_target
@@ -105,10 +104,9 @@ def copy_files(source_basedir, dest_basedir):
 
                 # Make latest dir if it doesn't exist
                 latest_dir = os.path.join(dest_basedir, project, product, institute, model, experiment,
-                                             frequency, realm, table, ensemble, varid, 'latest')
+                                             frequency, realm, table, ensemble, variable, 'latest')
 
                 if not os.path.exists(latest_dir):
-
                     print "SYMLINK LATEST: " + dest_version_dir
                     print "WITH    LATEST: " + latest_dir
                     os.symlink(dest_version_dir, latest_dir)
@@ -118,10 +116,10 @@ def copy_files(source_basedir, dest_basedir):
                     existing_dir_date = os.readlink(latest_dir)[-8:]
                     date_ints = [int(item) for item in (existing_dir_date[:4], existing_dir_date[4:6], existing_dir_date[6:8])]
                     existing_version = datetime.datetime(*date_ints)
-
                     date_ints = [int(item) for item in (date[:4], date[4:6], date[6:8])]
                     current_version = datetime.datetime(*date_ints)
-
+                    print existing_version
+                    print current_version
 
                     if current_version > existing_version:
                         # REPLACE SYMLINK
