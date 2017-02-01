@@ -37,7 +37,7 @@ def molest_line(line):
     ds_bits[0] = "cmip5_rt"    
     dsid_new = string.join(ds_bits, ".")
     bits[0] = dsid_new
-    line_new = string.join(bits, " ")
+    line_new = string.join(bits, " ") + "\n"
     return dsid_new, line_new
     
 def get_output_path(fn, dsid, version, outroot): 
